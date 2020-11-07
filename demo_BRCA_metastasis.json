@@ -1,0 +1,176 @@
+{
+    "clinical phenotype": "metastasis",
+    "thread": 4,
+    "max trail in downloading files": 4,
+    "run R in python": true,
+    "probe mapping to gene": true,
+    "probe mapping to gene method": "median",
+    "multiple mapped probe": "drop",
+    "probe mapping to gene keyword": "symbol",
+    "download method": "wget",
+    "log": true,
+    "metaQC": true,
+    "meta": true,
+    "mapping to gene in meta": false,
+    "mapping to gene in valid": true,
+    "meta method": "mDEDS",
+    "p-value cutoff": [0.05, 0.01, 0.001, 0.0001],
+    "effect size cutoff": [1.5, 2, 2.5, 3, 4],
+    "max different expression gene included": [25, 50, 100, 250, 500, 1000, 10000],
+    "max sample in heatmap": [25, 50, 100, 200],
+    "randomized sampling": "stratified sampling",
+    "randomized times": 10,
+    "outliers replace": true,
+    "database": "",
+
+    "root directory": "/home/minzhang/workspace/meta-Analysis/BRCA_metastasis",
+    "directory containing clinical csv files": "/home/minzhang/workspace/meta-Analysis/BRCA_clinical/breast_cancer_gse_clinical_tsv",
+    "gmt File": "/home/minzhang/workspace/meta-Analysis/c2.all.v6.2.symbols.gmt",
+    "simplified clinical data directory": "",
+    "GPL soft file directory": "",
+    "probe annotation directory": "",
+    "GSE raw directory": "",
+    "GSE matrix directory": "",
+    "CEL file directory": "",
+    "expression table directory": "",
+    "R script directory": "",
+    "gene expression table directory": "",
+    "metaQC directory": "",
+    "meta directory": "",
+
+    "datasets information": [
+        {
+            "gse": "GSE102484",
+            "gpl": "GPL570",
+            "col_id": 7,
+            "col_name": "event_metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                "0": "0",
+                "1": "1"
+            },
+            "metaQC": true,
+            "meta": true
+        },
+        {
+            "gse": "GSE20685",
+            "gpl": "GPL570",
+            "col_id": 15,
+            "col_name": "event_metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            },
+            "metaQC": true,
+            "meta": true
+        },
+        {
+            "gse": "GSE58984",
+            "gpl": "GPL570",
+            "col_id": 10,
+            "col_name": "distant metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            },
+            "metaQC": true,
+            "meta": true
+        },
+        {
+            "gse": "GSE29431",
+            "gpl": "GPL570",
+            "col_id": 5,
+            "col_name": "metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "yes": "1",
+                    "no": "0"
+            },
+            "metaQC": true,
+            "meta": true
+        },
+        {
+            "gse": "GSE61304",
+            "gpl": "GPL570",
+            "col_id": 8,
+            "col_name": "distant metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            },
+            "metaQC": true,
+            "meta": true
+        },
+        {
+            "gse": "GSE9893",
+            "gpl": "GPL5049",
+            "col_id": 104,
+            "col_name": "distant metastases",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "yes": "1",
+                    "no": "0"
+            },
+            "matrixOnly": true
+        },
+        {
+            "gse": "GSE37181",
+            "gpl": "GPL6884",
+            "col_id": 7,
+            "col_name": "distant metastasis (0-none)",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            },
+            "matrixOnly": true
+        },
+        {
+            "gse": "GSE45255",
+            "gpl": "GPL96",
+            "col_id": 5,
+            "col_name": "dmfs event (defined as distant metastasis or death from breast cancer)",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            }
+        },
+        {
+            "gse": "GSE46563",
+            "gpl": "GPL6884",
+            "col_id": 6,
+            "col_name": "efous_2",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "no distant metastasis": "0",
+                    "distant metastasis": "1"
+            },
+            "matrixOnly": true
+        },
+        {
+            "gse": "GSE5327",
+            "gpl": "GPL96",
+            "col_id": 5,
+            "col_name": "metastasis",
+            "dropNA": true,
+            "type": "category",
+            "map": {
+                    "0": "0",
+                    "1": "1"
+            }
+        }
+    ]
+}
