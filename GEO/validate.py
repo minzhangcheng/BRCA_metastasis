@@ -33,6 +33,7 @@ from GEO.utility import config
 from GEO.utility import mkdir
 
 
+"""
 def sampling(count, population=None, groupList=None, times=1):
     results = list()
     for i in range(0, times):
@@ -48,8 +49,60 @@ def sampling(count, population=None, groupList=None, times=1):
         return results[0]
     else:
         return results
+"""
 
 
+def sampling(count, gsmGroupDict, stratification='balance', times=1):
+    results = list()
+    for i in range(0, times):
+        if stratification == 'random':
+            gsmList = random.sample(list(gsmGroupDict.keys()), count)
+            results.append({gsm: gsmGroupDict[gsm] for gsm in gsmList})
+        else:
+            values = set(gsmGroupDict.values())
+            grouped = {value: [gsm for gsm in gsmGroupDict
+                               if gsmGroupDict[gsm] == value]
+                       for value in values}
+            counts = {value: len(grouped[value]) for value in values}
+            sum_counts = sum([counts[v] for v in values])
+            if sum([counts[v] for v in counts]) <= count:
+                results.append(gsmGroupDict)
+            elif stratification == 'balance':
+                c = sorted(counts.items(), key=lambda item:item[1])
+                sortedValues = [i[0] for i in c]
+                if c[0][1] >= count / len(values):
+                    selected = {v: random.sample(grouped[v], int(count/len(values)))
+                                for v in values}
+                    gsmList = list()
+                    for v in values:
+                        gsmList.extend(selected[v])
+                    results.append({gsm: gsmGroupDict[gsm] for gsm in gsmList})
+                else:
+                    c = {v: count / len(sortedValues) for v in sortedValues}
+                    for i in range(0, len(sortedValues)):
+                        if c[sortedValues[i]] <= counts[sortedValues[i]]:
+                            break
+                        else:
+                            c[sortedValues[i]] = counts[sortedValues[i]]
+                            for j in range(i+1, len(sortedValues)):
+                                c[sortedValues[j]] += (count / len(values) - c[sortedValues[i]]) / (len(values) - 1 - i)
+                    selected = {v: random.sample(grouped[v], int(c[v])) for v in
+                                values}
+                    gsmList = list()
+                    for v in values:
+                        gsmList.extend(selected[v])
+                    results.append({gsm: gsmGroupDict[gsm] for gsm in gsmList})
+            else:
+                c = {v: counts[v] / sum_counts * count for v in values}
+                selected = {v: random.sample(grouped[v], int(c[v])) for v in values}
+                gsmList = list()
+                for v in values:
+                    gsmList.extend(selected[v])
+                results.append({gsm: gsmGroupDict[gsm] for gsm in gsmList})
+    return results
+
+
+"""
 def samplingGse(gse, gpl, count, clinicalDir, stratification=False, times=1):
     if stratification:
         gsmGroupedList = dict()
@@ -78,6 +131,20 @@ def samplingGse(gse, gpl, count, clinicalDir, stratification=False, times=1):
             return sampling(count, population=gsmList, times=times)
         else:
             return [gsmList for i in range(0, times)]
+"""
+
+
+def samplingGse(gse, gpl, count, clinicalDir, stratification="", times=1):
+    gsmGroupDict = dict()
+    with open('{}/{}_{}_clinical.csv'.format(clinicalDir, gse, gpl), 'r') as rf:
+        lines = rf.readlines()
+        for line in lines[1:]:
+            line = line.split(',')
+            if len(line) > 1:
+                gsm = line[0].strip('\t \n\'"')
+                clinic = line[1].strip('\t \n')
+                gsmGroupDict[gsm] = clinic
+    return sampling(count, gsmGroupDict, stratification, times)
 
 
 def heatMapExpr(expr, gse, gpl, gsmList, probeList,
@@ -112,6 +179,15 @@ def heatMapExpr(expr, gse, gpl, gsmList, probeList,
             s += '\n{}\t{}'.format(probe,
                                    '\t'.join([str(e[probe][gsm])
                                               for gsm in gsmList]))
+        print(s, file=wf, end='')
+    return outputFile
+
+
+def heatMapGroup(gse, gpl, gsmGroupDict, outputFile):
+    with open(outputFile, 'w') as wf:
+        s = '\tgroup\n'
+        s += '\n'.join(['{}\t{}'.format(gsm, gsmGroupDict[gsm])
+                        for gsm in gsmGroupDict])
         print(s, file=wf, end='')
     return outputFile
 
@@ -180,10 +256,11 @@ def MAMA2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
                 mkdir('{}/{}_{}'.format(dir, gse, gpl))
                 expr = exprGSE(gse, gpl, exprDir)
                 for count in heatmapSampleCount:
-                    selectedSamples = samplingGse(gse, gpl, count,
+                    gsmGroupList = samplingGse(gse, gpl, count,
                                                   clinicalDir,
                                                   stratification=stratification,
                                                   times=ramdomTimes)
+                    selectedSamples = [d.keys() for d in gsmGroupList]
                     for i in range(0, ramdomTimes):
                         if count < len(selectedProbe):
                             filteredProbe = selectedProbe[0:int(count/2)]
@@ -192,11 +269,15 @@ def MAMA2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
                                         filteredProbe,
                                         '{}/{}_{}/{}_{}_expr.tsv'.format(dir, gse, gpl, count, i),
                                         outlierReplace)
+                            heatMapGroup(gse, gpl, gsmGroupList[i],
+                                         '{}/{}_{}/{}_{}_group.tsv'.format(dir, gse, gpl, count, i))
                         else:
                             heatMapExpr(expr, gse, gpl, selectedSamples[i],
                                         selectedProbe,
                                         '{}/{}_{}/{}_{}_expr.tsv'.format(dir, gse, gpl, count, i),
                                         outlierReplace)
+                            heatMapGroup(gse, gpl, gsmGroupList[i],
+                                         '{}/{}_{}/{}_{}_group.tsv'.format(dir, gse, gpl, count, i))
                         rScript += '\nexpr <- read.table("{}/{}_{}/{}_{}_expr.tsv")\n'.format(dir, gse, gpl, count, i)
                         rScript += 'x <- as.matrix(expr)\n'
                         rScript += 'png(file="{}/{}_{}/1_{}_{}.png", width=1024, height=1024, bg="transparent")\n'\
@@ -246,6 +327,7 @@ def mDEDS2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
     selectedProbe = sorted(fc.items(),
                            key=operator.itemgetter(1), reverse=True)
     selectedProbe = [i[0] for i in selectedProbe]
+    selectedProbe = ["KRT80", "SAPCD2", "FHOD1", "CCNB2", "ANLN", "COL4A1", "LOC100506119", "CDKN3", "IER5L", "MMP11", "FAM83D", "LOC286052", "AEBP1", "PCDH17", "SLITRK5", "BUB1B", "CCNB1", "SLC7A5", "DONSON", "SUGCT", "ST8SIA6-AS1", "AVEN", "PCAT6", "KIF14", "MEX3A", "ACKR1", "P2RY12", "WDR78", "MDH1B", "RP11-53O19.3", "C1orf21", "AGBL2", "RLN2", "CCDC176", "HAUS1", "DYNLRB2", "MED13L", "FCGBP", "KIAA1551", "UBXN10", "SUSD3", "PNRC2", "CASC1", "FAM120AOS", "CCDC170", "STC2", "CCR6", "FAM161B", "RP11-28F1.2", "LINC00472"]
     rScript = 'library(gplots)\nlibrary(pheatmap)\nlibrary(RColorBrewer)\n\n'
     for dataset in gse_gpl_list:
         gse = dataset[0]
@@ -253,10 +335,11 @@ def mDEDS2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
         mkdir('{}/{}_{}'.format(metaDir, gse, gpl))
         expr = exprGSE(gse, gpl, exprDir)
         for count in heatmapSampleCount:
-            selectedSamples = samplingGse(gse, gpl, count,
-                                          clinicalDir,
-                                          stratification=stratification,
-                                          times=ramdomTimes)
+            gsmGroupList = samplingGse(gse, gpl, count,
+                                       clinicalDir,
+                                       stratification=stratification,
+                                       times=ramdomTimes)
+            selectedSamples = [d.keys() for d in gsmGroupList]
             for i in range(0, ramdomTimes):
                 if count < len(selectedProbe):
                     filteredProbe = selectedProbe[0:int(count / 2)]
@@ -265,11 +348,15 @@ def mDEDS2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
                                 filteredProbe,
                                 '{}/{}_{}/{}_{}_expr.tsv'.format(metaDir, gse, gpl, count, i),
                                 outlierReplace)
+                    heatMapGroup(gse, gpl, gsmGroupList[i],
+                                 '{}/{}_{}/{}_{}_group.tsv'.format(metaDir, gse, gpl, count, i))
                 else:
                     heatMapExpr(expr, gse, gpl, selectedSamples[i],
                                 selectedProbe,
                                 '{}/{}_{}/{}_{}_expr.tsv'.format(metaDir, gse, gpl, count, i),
                                 outlierReplace)
+                    heatMapGroup(gse, gpl, gsmGroupList[i],
+                                 '{}/{}_{}/{}_{}_group.tsv'.format(metaDir, gse, gpl, count, i))
                 rScript += '\nexpr <- read.table("{}/{}_{}/{}_{}_expr.tsv")\n'.format(metaDir, gse, gpl, count, i)
                 rScript += 'x <- as.matrix(expr)\n'
                 rScript += 'png(file="{}/{}_{}/1_{}_{}.png", width=1024, height=1024, bg="transparent")\n'\
@@ -280,6 +367,15 @@ def mDEDS2Heatmap(gse_gpl_list, metaDir, exprDir, clinicalDir, clinicalTag,
                     .format(metaDir, gse, gpl, count, i)
                 rScript += 'heatmap.2(x, col=greenred, scale="row", trace="none")\n'
                 rScript += 'dev.off()\n'
+                rScript += '\nclinic <- read.table("{}/{}_{}/{}_{}_group.tsv", head=T, row.names=1)\n'.format(metaDir, gse, gpl, count, i)
+                rScript += 'c <- clinic\n'
+                rScript += 'annotation_c <- data.frame(c)\n'
+                rScript += 'rownames(annotation_c) <- colnames(x)\n'
+                for j in ['correlation', 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary', 'minkowski']:
+                    rScript += 'png(file="{}/{}_{}/3_{}_{}_{}.png", width=1024, height=1024, bg="transparent")\n'.format(metaDir, gse, gpl, count, i, j)
+                    rScript += 'pheatmap(as.matrix(x), annotation_col=annotation_c, color=bluered(200), border_color=NA, cutree_rows=2, cutree_cols=2, clustering_distance_cols="{}", scale="column")\n'.format(j)
+                    rScript += 'dev.off()\n'
+
     with open('{}/heatmap.R'.format(metaDir), 'w') as wf:
         print(rScript, file=wf)
     if runningR:
@@ -312,13 +408,9 @@ def meta2Heatmap(settingFile):
     ramdomTimes = settings['randomized times']
     heatmapSampleCount = settings['max sample in heatmap']
     outlierReplace = settings['outliers replace']
-    randomizedSampling = settings['randomized sampling']
+    stratification = settings['randomized sampling']
     runningR = settings['run R in python']
     differentGeneCount = settings['max different expression gene included']
-    if randomizedSampling == 'stratified sampling':
-        stratification = True
-    else:
-        stratification = False
     log = settings['log']
 
     if settings['meta method'] == 'MAMA':
