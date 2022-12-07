@@ -461,7 +461,26 @@ def getExprTable(gse, gpl, exprDir, gsmList=None, matrixOnly=False,
             if r[0]:
                 filename = '{}/{}'.format(gseRawDir, r[2])
                 with tarfile.open(filename, 'r') as tf:
-                    tf.extractall(celDir)
+                    def is_within_directory(directory, target):
+                        
+                        abs_directory = os.path.abspath(directory)
+                        abs_target = os.path.abspath(target)
+                    
+                        prefix = os.path.commonprefix([abs_directory, abs_target])
+                        
+                        return prefix == abs_directory
+                    
+                    def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                    
+                        for member in tar.getmembers():
+                            member_path = os.path.join(path, member.name)
+                            if not is_within_directory(path, member_path):
+                                raise Exception("Attempted Path Traversal in Tar File")
+                    
+                        tar.extractall(path, members, numeric_owner=numeric_owner) 
+                        
+                    
+                    safe_extract(tf, celDir)
                 for file in os.listdir(celDir):
                     gsm = file.split('.')[0].split('_')[0].split('-')[0].upper()
                     if gsmList:
